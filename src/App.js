@@ -4,6 +4,7 @@ import TOC from  './components/TOC.js';
 import Control from  './components/Control.js';
 import ReadContent from  './components/ReadContent.js';
 import CreateContent from  './components/CreateContent.js';
+import UpdateContent from  './components/UpdateContent.js';
 import { Component } from 'react';
 
 class App extends Component {
@@ -11,7 +12,7 @@ class App extends Component {
     super(props);
     this.max_content_id = 3;
     this.state = {
-      mode:"create",
+      mode:"welcome",
       selected_content_id:1,
       subject:{title:"WEB", sub:"world wide web!"},
       welcome:{title:"Welcome", desc:"Hello, React!!"},
@@ -22,33 +23,58 @@ class App extends Component {
       ]
     }
   }
-  render() {
+  getReadContent() {
+    var i = 0;
+      while(i < this.state.contents.length) {
+        var data = this.state.contents[i];
+        if ( data.id === this.state.selected_content_id) {
+          return data;
+        }
+        i += 1;
+      }
+  }
+  getContent() {
     var _title, _desc, _article = null;
     if ( this.state.mode === "welcome" ) {
       _title = this.state.welcome.title;
       _desc = this.state.welcome.desc;
       _article = <ReadContent title={_title} desc={_desc}></ReadContent>
     } else if ( this.state.mode === "read") {
-      var i = 0;
-      while(i < this.state.contents.length) {
-        var data = this.state.contents[i];
-        if ( data.id === this.state.selected_content_id) {
-          _title = data.title;
-          _desc = data.desc;   
-        }
-        i += 1;
-      }
-      _article = <ReadContent title={_title} desc={_desc}></ReadContent>
+      var _content = this.getReadContent();
+      _article = <ReadContent title={_content.title} desc={_content.desc}></ReadContent>
     } else if ( this.state.mode === 'create') {
       _article = <CreateContent onSubmit={function(_title, _desc){
-        // add content to this.state.contents
         this.max_content_id += 1;
-        var _contents = this.state.contents.concat({id:this.max_content_id, title:_title, desc:_desc});
+        var _contents = Array.from(this.state.contents);
+        _contents.push({id:this.max_content_id, title:_title, desc:_desc});
         this.setState({
-          contents:_contents
+          contents:_contents,
+          mode:'read',
+          selected_content_id:this.max_content_id
         })
       }.bind(this)}></CreateContent>
+    } else if ( this.state.mode === 'update') {
+      var _content = this.getReadContent();
+      _article = <UpdateContent data={_content} onSubmit={
+        function(_id, _title, _desc){
+          var _contents = Array.from(this.state.contents);
+          var i = 0;
+          while(i < _contents.length){
+            if(_contents[i].id === _id) {
+              _contents[i] = {id:_id, title:_title, desc:_desc};
+              break;
+            }
+            i += 1;
+          }
+          this.setState({
+            contents:_contents,
+            mode: 'read'
+          })
+        }.bind(this)}></UpdateContent>
     }
+    return _article;
+  }
+  render() {
     return (
       <div className="App">
         <Subject 
@@ -69,12 +95,29 @@ class App extends Component {
         </TOC>
         <Control 
           onChangeMode={function(_mode){
-            this.setState({
-              mode:_mode
-            });
+            if (_mode === 'delete'){
+              if (window.confirm('삭제하시겠습니까?')) {
+                var _contents = Array.from(this.state.contents)
+                var i = 0;
+                while(i < _contents.length) {
+                  if (_contents[i].id === this.state.selected_content_id){
+                    _contents.splice(i, 1);
+                    break;
+                  }
+                  i += 1;
+                }
+                this.setState({contents:_contents, mode:'welcome'});
+                alert('삭제 완료되었습니다.');
+              }
+            } else {
+              this.setState({
+                mode:_mode
+              });
+            }
+            
           }.bind(this)}>
         </Control>
-        {_article}
+        {this.getContent()}
         
       </div>
     );
